@@ -1,0 +1,341 @@
+{% load static %}
+
+<!DOCTYPE html>
+  <html>
+    <head>
+      <!--Import Google Icon Font-->
+      <link href="{% static 'list/css/icon.css' %}" rel="stylesheet"/>
+	  <link href="{% static 'list/css/jquery-ui.css' %}" rel="stylesheet"/>
+	  
+      <!--Import materialize.css-->
+      <link type="text/css" rel="stylesheet" href="{% static 'list/css/materialize.min.css' %}"  media="screen,projection"/>
+
+      <!--Let browser know website is optimized for mobile-->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+	  <meta http-equiv="Content-type" content="text/html; charset=utf-8" /> 
+    </head>
+	
+	<style>
+		html, 
+		body,
+		.row,
+		.tabs-content {
+			 height: 100% !important;
+		}
+		
+		.tabs a {
+			font-size: 1.2rem !important;
+			color: white !important;
+		}
+		
+		.item-lista {
+			min-height: 60px;
+			margin: 0px;
+		}
+		
+		.item-lista label {
+			font-size: 1.1rem;
+			color: black;
+			max-width: 75%;
+		}
+		
+		#botao_add {
+			margin-top: 1em;
+		}
+		
+		#barra_add {
+			background-color: #6475d2;
+		}
+
+	</style>
+
+    <body>
+		{% if tarefas %}
+			{% for tarefa in tarefas %}
+			<!-- Modal Structure -->
+			<div id="modal_exclusao{{tarefa.id}}" class="modal">
+				<div class="modal-content">
+				  <h4>Você tem certeza que deseja excluir?</h4>
+				  <p>Essa tarefa será movida para a lixeira.</p>
+				</div>
+				<div class="modal-footer">
+				  <a href="#!" class="modal-action modal-close waves-effect waves-green btn-flat">Não</a>
+				  <a id="excluir_tarefa{{tarefa.id}}" href="#!" class="modal-action modal-close waves-effect waves-green btn-flat">Sim</a>
+				</div>
+			</div>
+		    {% endfor %}
+		{% endif %}
+
+		
+		<div class="col s12 m8 l9">
+			<nav class="indigo">
+			  <div class="nav-wrapper">
+				<div class="col s12">
+				<a href="#!" class="brand-logo center">Lista de Tarefas</a>
+				<ul class="left hide-on-med-and-down">
+				</ul>
+				</div>
+			  </div>
+			</nav>
+		</div>
+		<nav id="barra_add">
+			<div class="nav-wrapper">
+			<form>
+				<div class="input-field">
+					<input id="descricao_nova_tarefa" type="search" required placeholder="Adicione uma nova tarefa">
+					<label class="label-icon" for="search"><i class="material-icons">add_circle</i></label>
+					<i id="apaga_bar_add" class="material-icons">close</i>
+					<i id="salvar_tarefa" class="material-icons" style="right:3rem">add</i>
+				</div>
+			</form>
+			</div>
+		</nav>
+		<br>
+		
+              <div class="row">
+                <div class="col s12 m12 l12" id="todas">
+				{% if tarefas %}
+				  <ul id="sortable">
+				  {% for tarefa in tarefas %}
+					  {% if tarefa.status_tarefa != 'E' %}
+					  <ul id="task-card{{tarefa.id}}" class="collection item-lista" sort="{{tarefa.id}}">
+						<li class="collection-item dismissable" >
+						  <input type="checkbox" id="task{{tarefa.id}}" />
+						  <label for="task{{tarefa.id}}">{{ tarefa.descricao_tarefa }} </label>	
+						  <a href="#modal_exclusao{{tarefa.id}}" id="deleta_tarefa{{tarefa.id}}" class="secondary-content btn-floating btn-small waves-effect waves-light red modal-trigger" style="margin-left: 10px"><i class="material-icons">delete</i></a>  
+						  <a href="javascript:void(0)" id="edita_tarefa{{tarefa.id}}" class="secondary-content btn-floating btn-small waves-effect waves-light blue"><i class="material-icons">create</i></a> 
+						</li>
+					  </ul>
+					  {% endif %}
+				  {% endfor %}
+				  </ul>
+				{% else %}		
+					<p>Nenhuma tarefa cadastrada.</p>	
+				{% endif %}								
+					
+                </div>
+			</div>
+				
+
+      <!--Import jQuery before materialize.js-->
+      <script type="text/javascript" src="{% static 'list/js/jquery-3.2.1.min.js' %}"></script>
+      
+	  <script type="text/javascript" src="{% static 'list/js/jquery-ui.js' %}"></script>
+	  <script type="text/javascript" src="{% static 'list/js/materialize.min.js' %}"></script>
+	  <script>		  
+		  function salva_status_tarefa(id, status){
+			$.ajax({
+				url: '/list/salva_status/',
+				data: {
+				  'id_tarefa': id,
+				  'status_tarefa': status
+				},
+				dataType: 'json',
+				success: function (data) {
+					if(data.tarefa_salva){
+					}
+				}
+			});
+		  }
+	  
+		  function ativaSortable(id){
+			$( '#'+id ).sortable();
+			$( '#'+id ).disableSelection();
+			$( '#'+id ).sortable({
+			  axis: "y",
+
+			  stop: function(event, ui) {
+				var ordem_tarefas = $('#'+id).sortable("serialize", { key: "sort" });
+				
+				$.ajax({
+					url: '/list/reordena/',
+					data: {
+					  'ordem_tarefas': ordem_tarefas
+					},
+					dataType: 'json',
+					success: function (data) {
+						if(data.tarefas_ordenadas){
+							//alert("OK");
+						}
+					}
+				});
+			  }
+			});
+		  }
+		  
+		  function remove_tarefa(id, sortable, taskcard){
+			$.ajax({
+				url: '/list/remove_tarefa/',
+				data: {
+				  'id_tarefa': id
+				},
+				dataType: 'json',
+				success: function (data) {
+					if(data.tarefa_removida){	
+						$('#'+taskcard+id).remove();
+						$('#'+sortable).sortable("refresh");
+					}
+				}
+			});
+		  }
+	  
+		  function recarregaLista(id, ordem, descricao, status){
+			 $('#sortable')
+			  .append("<ul id='task-card"+id+"' class='collection item-lista' sort='"+id+"'>"+
+						"<li class='collection-item dismissable' style='touch-action: pan-y; -webkit-user-drag: none; -webkit-tap-highlight-color: rgba(0, 0, 0, 0);'>"+
+						  "<input type='checkbox' id='task"+id+"' />"+
+						  "<label for='task"+id+"'>"+descricao+"</label>"+	
+						  "<a href='#modal_exclusao"+id+"' id='deleta_tarefa"+id+"' class='secondary-content btn-floating btn-small waves-effect waves-light red modal-trigger' style='margin-left: 10px'><i class='material-icons'>delete</i></a>"+  
+						  "<a href='javascript:void(0)' id='edita_tarefa"+id+"' class='secondary-content btn-floating btn-small waves-effect waves-light blue'><i class='material-icons'>create</i></a>"+ 
+						"</li>"+
+					  "</ul>")
+			  .sortable("refresh");
+			  
+			  $('#task'+id).on('click',function(){
+					$(this).next('label').css(
+						'text-decoration',
+						this.checked ? 'line-through' : 'none'
+					);
+					$(this).next('label').css(
+						'color',
+						this.checked ? 'gray' : 'black'
+					);
+					if($(this).is(":checked")){
+						var id = $(this).get(0).id;
+						var status = 'feita';
+						salva_status_tarefa(id, status);
+					}
+					else if($(this).is(":checked") == false){
+						var id = $(this).get(0).id;
+						var status = 'pendente';
+						salva_status_tarefa(id, status);
+					}
+				});
+				
+				$('#edita_tarefa'+id).mousedown(function() {
+					$( "#sortable" ).sortable( "destroy" );
+				});
+				$('#deleta_tarefa'+id).mousedown(function() {
+					$( "#sortable" ).sortable( "destroy" );
+				});
+				$('#edita_tarefa'+id).mouseup(function() {
+					ativaSortable('sortable');
+				});
+				$('#deleta_tarefa'+id).mouseup(function() {
+					ativaSortable('sortable');
+				});
+				
+				$('#excluir_tarefa'+id).on('click',function(){
+					remove_tarefa(id, 'sortable', 'task-card');
+				});
+		  }
+		  	  
+		  $(document).ready(function(){
+			$('ul.tabs').tabs({
+				'swipeable' : false,
+			});
+			
+			$('.modal').modal();
+			
+			{% if tarefas %}
+				{% for tarefa in tarefas %}					
+					$('#task{{ tarefa.id }}').click(function () {
+						$(this).next('label').css(
+							'text-decoration',
+							this.checked ? 'line-through' : 'none'
+						);
+						$(this).next('label').css(
+							'color',
+							this.checked ? 'gray' : 'black'
+						);
+						if($(this).is(":checked")){
+							var id = $(this).get(0).id;
+							var status = 'feita';
+							salva_status_tarefa(id, status);
+						}
+						else if($(this).is(":checked") == false){
+							var id = $(this).get(0).id;
+							var status = 'pendente';
+							salva_status_tarefa(id, status);
+						}
+					});
+					
+					{% if tarefa.status_tarefa == 'F' %}
+						$('#task{{ tarefa.id }}').prop('checked', true);
+						$('#task{{ tarefa.id }}').next('label').css(
+							'text-decoration','line-through'
+						);
+						$('#task{{ tarefa.id }}').next('label').css(
+							'color', 'gray'
+						);	
+					{% endif %}
+					
+					$('#edita_tarefa{{tarefa.id}}').mousedown(function() {
+						$( "#sortable" ).sortable( "destroy" );
+					});
+					$('#deleta_tarefa{{tarefa.id}}').mousedown(function() {
+						$( "#sortable" ).sortable( "destroy" );
+					});
+					$('#edita_tarefa{{tarefa.id}}').mouseup(function() {
+						ativaSortable('sortable');
+					});
+					$('#deleta_tarefa{{tarefa.id}}').mouseup(function() {
+						ativaSortable('sortable');
+					});
+					
+					$('#excluir_tarefa{{tarefa.id}}').click(function () {
+						remove_tarefa({{tarefa.id}}, 'sortable', 'task-card');
+					});
+					
+					$('#edita_tarefa{{tarefa.id}}').click(function () {	
+						$.ajax({
+							url: '/list/detalhes/',
+							data: {
+							  'id': {{tarefa.id}}
+							},
+							dataType: 'json',
+							success: function (data) {
+								if(data.id){
+									
+								}
+							}
+						});
+					});
+					
+				{% endfor %}
+			{% endif %}
+			
+			$('#apaga_bar_add').click(function () {
+				$('#descricao_nova_tarefa').val('');
+			});
+			
+			ativaSortable('sortable');
+			
+			
+			$("#salvar_tarefa").click(function () {
+				var descricao_nova_tarefa = $('#descricao_nova_tarefa').val();
+				if(descricao_nova_tarefa != '') {
+					$.ajax({
+						url: '/list/adiciona_tarefa/',
+						data: {
+						  'descricao_nova_tarefa': descricao_nova_tarefa
+						},
+						dataType: 'json',
+						success: function (data) {
+							if(data.tarefa_salva){
+								recarregaLista(data.id, data.ordem, data.descricao, data.status);	
+								$('#descricao_nova_tarefa').val('');
+								window.location.reload(1);
+							}
+						}
+					});
+				}
+			});
+			
+			
+		  });
+	  </script>
+    </body>
+  </html>
+  
+  
